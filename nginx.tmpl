@@ -165,10 +165,12 @@ server {
         server_name {{ $host }};
         server_tokens off;
 
-        listen {{ $https_port }} ssl http2;
+        listen {{ $https_port }} ssl;
         {{ if $enable_ipv6 }}
-        listen [::]:{{ $https_port }} ssl http2;
+        listen [::]:{{ $https_port }} ssl;
         {{ end }}
+
+        http2 on;
 
         {{ if $internal_network }}
         # Only allow traffic from internal clients
