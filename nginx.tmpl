@@ -65,12 +65,37 @@ proxy_set_header REMOTE-ADDR $remote_addr;
 proxy_set_header NGINX-SCHEME $scheme;
 proxy_set_header Proxy "";
 
+# Send the requested hostname when proxying over TLS, so the upstream serves the matching site
+proxy_ssl_server_name on;
+proxy_ssl_name $host;
+
 # Unrecognized host
 server {
     return 403;
 }
 
 {{ $enable_ipv6 := eq (or ($.Env.ENABLE_IPV6) "") "true" }}
+
+{{/* Each TLS port once, skipping empty entries such as a site that has no certificate yet */}}
+{{ $https_ports := dict }}
+{{ range $container := $ }}
+    {{ range $port := split (or $container.Env.VIRTUAL_HTTPS_PORT "") "," }}
+        {{ if trim $port }}{{ $_ := set $https_ports (trim $port) true }}{{ end }}
+    {{ end }}
+{{ end }}
+
+{{ range $https_port, $_ := $https_ports }}
+# Unrecognized host on {{ $https_port }}: refuse TLS, so no certificate shows which sites live here
+server {
+    listen {{ $https_port }} ssl default_server;
+    {{ if $enable_ipv6 }}
+    listen [::]:{{ $https_port }} ssl default_server;
+    {{ end }}
+
+    ssl_reject_handshake on;
+    return 444;
+}
+{{ end }}
 
 {{ define "location" }}
     {{ $container := .Container }}
