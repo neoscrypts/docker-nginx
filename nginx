@@ -14,7 +14,7 @@ function create_external_volume() {
 
 function create_external_network() {
 	if ! docker network inspect "$1" >/dev/null 2>&1; then
-		docker network create "$1"
+		docker network create --ipv6 "$1"
 	fi
 }
 
